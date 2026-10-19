@@ -1,0 +1,20 @@
+# Non-shared documents such as requirements (prevent publishing when open-sourcing)
+.docs/
+
+# Local bookmark data
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+
+# Dependencies and build artifacts
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# Environment variables and secrets
+.env
+.env*.local

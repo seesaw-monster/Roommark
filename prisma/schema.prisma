@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  icon      String?
+  sortOrder Int        @default(0)
+  categories Category[]
+  bookmarks Bookmark[]
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  roomId    String
+  room      Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  sortOrder Int        @default(0)
+  bookmarks Bookmark[]
+
+  @@unique([roomId, slug])
+}
+
+// Why not Json/String[]: SQLite provider has no native Json/Array columns, so JSON is stored as serialized String and parsed in lib/bookmarks.ts.
+model Bookmark {
+  id          String    @id @default(cuid())
+  roomId      String
+  room        Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  url         String
+  title       String
+  description String?
+  ogImage     String?
+  memo        String?
+  tagsJson    String    @default("[]")
+  metadata    String?
+  favorite    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([roomId, createdAt])
+  @@index([roomId, updatedAt])
+  @@index([roomId, title])
+}
