@@ -18,3 +18,8 @@ dist/
 # Environment variables and secrets
 .env
 .env*.local
+
+# Local opencode/crit tooling
+/opencode.jsonc
+/.opencode/plugins/crit.ts
+/.opencode/skills/crit/

@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.13.1",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "dev": "prisma generate && next dev",
     "build": "prisma generate && next build",
     "start": "next start",
@@ -15,6 +16,14 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
