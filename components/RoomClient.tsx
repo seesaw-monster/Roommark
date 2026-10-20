@@ -7,6 +7,7 @@ import { RegisterModal } from "@/components/RegisterModal";
 import type { BookmarkDTO, RoomInfo, TagCount } from "@/components/types";
 
 type SortKey = "new" | "updated" | "title";
+type ReadFilter = "" | "unread" | "read" | "reread";
 
 export function BookmarkListClient({
   slug,
@@ -30,8 +31,10 @@ export function BookmarkListClient({
   const [activeTag, setActiveTag] = useState("");
   const [sort, setSort] = useState<SortKey>("new");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [readFilter, setReadFilter] = useState<ReadFilter>("");
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const isTechArticle = fixedCategorySlug === "tech-article";
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -44,6 +47,10 @@ export function BookmarkListClient({
     if (activeTag) params.set("tag", activeTag);
     if (fixedCategorySlug) params.set("category", fixedCategorySlug);
     if (favoriteOnly) params.set("favorite", "true");
+    if (isTechArticle) {
+      if (readFilter === "unread" || readFilter === "read") params.set("readStatus", readFilter);
+      if (readFilter === "reread") params.set("reread", "true");
+    }
     params.set("sort", sort);
     const res = await fetch(`/api/rooms/${slug}/bookmarks?${params.toString()}`);
     if (res.ok) {
@@ -52,7 +59,7 @@ export function BookmarkListClient({
       setTags(data.tags as TagCount[]);
     }
     setLoading(false);
-  }, [slug, debouncedQ, activeTag, fixedCategorySlug, sort, favoriteOnly]);
+  }, [slug, debouncedQ, activeTag, fixedCategorySlug, sort, favoriteOnly, readFilter, isTechArticle]);
 
   useEffect(() => {
     setLoading(true);
@@ -64,6 +71,18 @@ export function BookmarkListClient({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ favorite: !b.favorite }),
+    });
+    if (res.ok) load();
+  }
+
+  async function updateReadState(
+    b: BookmarkDTO,
+    patch: { readStatus?: "unread" | "read"; reread?: boolean },
+  ) {
+    const res = await fetch(`/api/bookmarks/${b.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
     });
     if (res.ok) load();
   }
@@ -127,6 +146,18 @@ export function BookmarkListClient({
             />
             ★のみ
           </label>
+          {isTechArticle && (
+            <select
+              value={readFilter}
+              onChange={(e) => setReadFilter(e.target.value as ReadFilter)}
+              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm"
+            >
+              <option value="">すべての読書状態</option>
+              <option value="unread">未読</option>
+              <option value="read">既読</option>
+              <option value="reread">また読む</option>
+            </select>
+          )}
         </div>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 text-xs">
@@ -166,7 +197,9 @@ export function BookmarkListClient({
               key={b.id}
               roomSlug={slug}
               bookmark={b}
+              isTechArticle={isTechArticle}
               onToggleFavorite={toggleFavorite}
+              onUpdateReadState={updateReadState}
               onDelete={removeBookmark}
             />
           ))}

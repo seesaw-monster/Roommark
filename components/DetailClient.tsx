@@ -13,6 +13,8 @@ export function DetailClient({ roomSlug, id }: { roomSlug: string; id: string })
   const [memo, setMemo] = useState("");
   const [tags, setTags] = useState("");
   const [favorite, setFavorite] = useState(false);
+  const [readStatus, setReadStatus] = useState<"unread" | "read">("unread");
+  const [reread, setReread] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -30,6 +32,8 @@ export function DetailClient({ roomSlug, id }: { roomSlug: string; id: string })
       setMemo(b.memo ?? "");
       setTags(b.tags.join(", "));
       setFavorite(b.favorite);
+      setReadStatus(b.readStatus);
+      setReread(b.reread);
       setLoaded(true);
     });
   }, [id]);
@@ -50,6 +54,7 @@ export function DetailClient({ roomSlug, id }: { roomSlug: string; id: string })
         memo: memo.trim(),
         tags: tags.split(/[,\s\u3000\uFF0C]+/).filter(Boolean),
         favorite,
+        ...(bookmark?.categorySlug === "tech-article" ? { readStatus, reread } : {}),
       }),
     });
     const data = await res.json();
@@ -105,6 +110,34 @@ export function DetailClient({ roomSlug, id }: { roomSlug: string; id: string })
           <input type="checkbox" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} />
           お気に入り
         </label>
+        {bookmark.categorySlug === "tech-article" && (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-sm font-medium">読書状態</span>
+              <select
+                value={readStatus}
+                onChange={(e) => {
+                  const next = e.target.value as "unread" | "read";
+                  setReadStatus(next);
+                  if (next === "unread") setReread(false);
+                }}
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+              >
+                <option value="unread">未読</option>
+                <option value="read">既読</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={reread}
+                disabled={readStatus !== "read"}
+                onChange={(e) => setReread(e.target.checked)}
+              />
+              また読む
+            </label>
+          </div>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end pt-2">
           <button

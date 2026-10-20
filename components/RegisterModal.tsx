@@ -20,10 +20,14 @@ export function RegisterModal({
   const [memo, setMemo] = useState("");
   const [tags, setTags] = useState("");
   const [categorySlug, setCategorySlug] = useState(fixedCategorySlug ?? "");
+  const [readStatus, setReadStatus] = useState<"unread" | "read">("unread");
+  const [reread, setReread] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ogImage, setOgImage] = useState<string | null>(null);
+  const effectiveCategorySlug = fixedCategorySlug || categorySlug;
+  const isTechArticle = effectiveCategorySlug === "tech-article";
 
   async function handleFetchTitle() {
     if (!url.trim()) {
@@ -49,7 +53,7 @@ export function RegisterModal({
       setError("URLを入力してください");
       return;
     }
-    const effectiveCategory = fixedCategorySlug || categorySlug;
+    const effectiveCategory = effectiveCategorySlug;
     if (room.categories.length > 0 && !effectiveCategory) {
       setError("カテゴリを選択してください");
       return;
@@ -66,6 +70,7 @@ export function RegisterModal({
           memo: memo.trim() || undefined,
           tags: tags.split(/[,\s\u3000\uFF0C]+/).filter(Boolean),
           categorySlug: effectiveCategory || undefined,
+          ...(isTechArticle ? { readStatus, reread } : {}),
         }),
       });
       const data = await res.json();
@@ -148,6 +153,34 @@ export function RegisterModal({
                 </select>
               </label>
             ))}
+          {isTechArticle && (
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-sm font-medium">読書状態</span>
+                <select
+                  value={readStatus}
+                  onChange={(e) => {
+                    const next = e.target.value as "unread" | "read";
+                    setReadStatus(next);
+                    if (next === "unread") setReread(false);
+                  }}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+                >
+                  <option value="unread">未読</option>
+                  <option value="read">既読</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={reread}
+                  disabled={readStatus !== "read"}
+                  onChange={(e) => setReread(e.target.checked)}
+                />
+                また読む
+              </label>
+            </div>
+          )}
           <label className="block">
             <span className="text-sm font-medium">メモ</span>
             <textarea

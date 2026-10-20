@@ -11,7 +11,40 @@ export type BookmarkInput = {
   tags?: string[];
   metadata?: Record<string, unknown> | null;
   favorite?: boolean;
+  readStatus?: ReadStatus;
+  reread?: boolean;
 };
+
+export type ReadStatus = "unread" | "read";
+
+export type ReadState = {
+  readStatus: ReadStatus;
+  reread: boolean;
+};
+
+export function isReadStatus(value: unknown): value is ReadStatus {
+  return value === "unread" || value === "read";
+}
+
+export function getReadState(metadata: Record<string, unknown> | null): ReadState {
+  const readStatus = isReadStatus(metadata?.readStatus) ? metadata.readStatus : "unread";
+  return {
+    readStatus,
+    reread: readStatus === "read" && metadata?.reread === true,
+  };
+}
+
+export function mergeReadState(
+  metadata: Record<string, unknown> | null,
+  input: { readStatus?: ReadStatus; reread?: boolean },
+): string {
+  const current = getReadState(metadata);
+  const readStatus = input.readStatus ?? current.readStatus;
+  const normalizedReadStatus: ReadStatus =
+    input.readStatus === "unread" ? "unread" : input.reread === true ? "read" : readStatus;
+  const reread = normalizedReadStatus === "read" && (input.reread ?? current.reread) === true;
+  return JSON.stringify({ ...(metadata ?? {}), readStatus: normalizedReadStatus, reread });
+}
 
 export function parseTags(tagsJson: string): string[] {
   try {
@@ -51,6 +84,8 @@ export type BookmarkDTO = {
   tags: string[];
   metadata: Record<string, unknown> | null;
   favorite: boolean;
+  readStatus: ReadStatus;
+  reread: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -62,6 +97,7 @@ const withCategory = Prisma.validator<Prisma.BookmarkInclude>()({
 type BookmarkWithCategory = Prisma.BookmarkGetPayload<{ include: typeof withCategory }>;
 
 export function toBookmarkDTO(b: BookmarkWithCategory): BookmarkDTO {
+  const metadata = parseMetadata(b.metadata);
   return {
     id: b.id,
     roomId: b.roomId,
@@ -74,8 +110,9 @@ export function toBookmarkDTO(b: BookmarkWithCategory): BookmarkDTO {
     ogImage: b.ogImage,
     memo: b.memo,
     tags: parseTags(b.tagsJson),
-    metadata: parseMetadata(b.metadata),
+    metadata,
     favorite: b.favorite,
+    ...getReadState(metadata),
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
   };

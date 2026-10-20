@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
+  getReadState,
+  isReadStatus,
+  mergeReadState,
   normalizeTagsInput,
   normalizeUrl,
+  parseMetadata,
   parseTags,
   serializeTags,
   toBookmarkDTO,
+  type ReadStatus,
 } from "@/lib/bookmarks";
 import { fetchOgp } from "@/lib/ogp";
 
@@ -25,6 +30,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const tag = (searchParams.get("tag") ?? "").trim();
   const category = (searchParams.get("category") ?? "").trim();
   const favoriteOnly = searchParams.get("favorite") === "true";
+  const readStatusParam = searchParams.get("readStatus");
+  const readStatusFilter = isReadStatus(readStatusParam) ? readStatusParam : null;
+  const rereadOnly = searchParams.get("reread") === "true";
   const sort = parseSort(searchParams.get("sort"));
 
   let categoryId: string | undefined;
@@ -53,7 +61,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     take: 1000,
   });
 
-  const filtered = tag ? rows.filter((r) => parseTags(r.tagsJson).includes(tag)) : rows;
+  const filtered = rows.filter((r) => {
+    if (tag && !parseTags(r.tagsJson).includes(tag)) return false;
+    if (!readStatusFilter && !rereadOnly) return true;
+    const state = getReadState(parseMetadata(r.metadata));
+    if (readStatusFilter && state.readStatus !== readStatusFilter) return false;
+    return !rereadOnly || state.reread;
+  });
 
   const tagCounts = new Map<string, number>();
   for (const r of rows) {
@@ -95,6 +109,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     return NextResponse.json({ error: "カテゴリを選択してください" }, { status: 400 });
   }
 
+  let readStatus: ReadStatus | undefined;
+  if ("readStatus" in body) {
+    if (!isReadStatus(body.readStatus)) {
+      return NextResponse.json({ error: "読書状態が不正です" }, { status: 400 });
+    }
+    readStatus = body.readStatus;
+  }
+  const reread = "reread" in body ? body.reread === true : undefined;
+  const metadata =
+    readStatus !== undefined || reread !== undefined
+      ? mergeReadState(null, { readStatus, reread })
+      : undefined;
+
   let title = typeof body.title === "string" ? body.title.trim() : "";
   let description = typeof body.description === "string" ? body.description.trim() || null : null;
   let ogImage = typeof body.ogImage === "string" ? body.ogImage.trim() || null : null;
@@ -121,6 +148,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       memo: typeof body.memo === "string" ? body.memo.trim() || null : null,
       tagsJson: serializeTags(normalizeTagsInput(body.tags)),
       favorite: body.favorite === true,
+      ...(metadata !== undefined ? { metadata } : {}),
     },
     include: { category: { select: { name: true, slug: true } } },
   });

@@ -21,6 +21,8 @@ export type BookmarkDTO = {
   tags: string[];
   metadata: Record<string, unknown> | null;
   favorite: boolean;
+  readStatus: "unread" | "read";
+  reread: boolean;
   createdAt: string;
   updatedAt: string;
 };
