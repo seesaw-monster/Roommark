@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeTagsInput, normalizeUrl, serializeTags, toBookmarkDTO } from "@/lib/bookmarks";
+import {
+  isReadStatus,
+  mergeReadState,
+  normalizeTagsInput,
+  normalizeUrl,
+  parseMetadata,
+  serializeTags,
+  toBookmarkDTO,
+  type ReadStatus,
+} from "@/lib/bookmarks";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,6 +35,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   } catch {
     return NextResponse.json({ error: "リクエストボディが不正です" }, { status: 400 });
   }
+
+  let readStatus: ReadStatus | undefined;
+  if ("readStatus" in body) {
+    if (!isReadStatus(body.readStatus)) {
+      return NextResponse.json({ error: "読書状態が不正です" }, { status: 400 });
+    }
+    readStatus = body.readStatus;
+  }
+  const reread = "reread" in body ? body.reread === true : undefined;
+  const metadata =
+    readStatus !== undefined || reread !== undefined
+      ? mergeReadState(parseMetadata(existing.metadata), { readStatus, reread })
+      : undefined;
 
   let categoryId: string | null | undefined;
   if ("categorySlug" in body) {
@@ -73,6 +95,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         : {}),
       ...("tags" in body ? { tagsJson: serializeTags(normalizeTagsInput(body.tags)) } : {}),
       ...("favorite" in body ? { favorite: body.favorite === true } : {}),
+      ...(metadata !== undefined ? { metadata } : {}),
       ...(categoryId !== undefined ? { categoryId } : {}),
     },
     include: { category: { select: { name: true, slug: true } } },

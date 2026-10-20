@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  getReadState,
+  isReadStatus,
+  mergeReadState,
   normalizeTagsInput,
   normalizeUrl,
   parseMetadata,
@@ -57,6 +60,85 @@ describe("parseMetadata", () => {
 
   it("不正なJSONはnullを返す", () => {
     expect(parseMetadata("{broken")).toBeNull();
+  });
+});
+
+describe("isReadStatus", () => {
+  it("accepts only unread and read", () => {
+    expect(isReadStatus("unread")).toBe(true);
+    expect(isReadStatus("read")).toBe(true);
+    expect(isReadStatus("reread")).toBe(false);
+    expect(isReadStatus(null)).toBe(false);
+    expect(isReadStatus(1)).toBe(false);
+  });
+});
+
+describe("getReadState", () => {
+  it("returns unread with reread false when metadata is missing", () => {
+    expect(getReadState(null)).toEqual({ readStatus: "unread", reread: false });
+  });
+
+  it("returns unread with reread false when read status is not set", () => {
+    expect(getReadState({})).toEqual({ readStatus: "unread", reread: false });
+    expect(getReadState({ foo: "bar" })).toEqual({ readStatus: "unread", reread: false });
+  });
+
+  it("returns read status and reread flag", () => {
+    expect(getReadState({ readStatus: "read", reread: true })).toEqual({
+      readStatus: "read",
+      reread: true,
+    });
+  });
+
+  it("sets reread to false when the flag is not a boolean", () => {
+    expect(getReadState({ readStatus: "read", reread: "true" })).toEqual({
+      readStatus: "read",
+      reread: false,
+    });
+  });
+
+  it("treats an invalid read status as unread", () => {
+    expect(getReadState({ readStatus: "done", reread: true })).toEqual({
+      readStatus: "unread",
+      reread: false,
+    });
+  });
+
+  it("clears reread when the status is unread", () => {
+    expect(getReadState({ readStatus: "unread", reread: true })).toEqual({
+      readStatus: "unread",
+      reread: false,
+    });
+  });
+});
+
+describe("mergeReadState", () => {
+  it("updates read state while preserving existing metadata", () => {
+    const merged = mergeReadState(
+      { foo: "bar", readStatus: "unread", reread: false },
+      { readStatus: "read" },
+    );
+    expect(JSON.parse(merged)).toEqual({ foo: "bar", readStatus: "read", reread: false });
+  });
+
+  it("stores reread alone as read", () => {
+    const merged = mergeReadState(null, { reread: true });
+    expect(JSON.parse(merged)).toEqual({ readStatus: "read", reread: true });
+  });
+
+  it("clears reread when changing back to unread", () => {
+    const merged = mergeReadState({ readStatus: "read", reread: true }, { readStatus: "unread" });
+    expect(JSON.parse(merged)).toEqual({ readStatus: "unread", reread: false });
+  });
+
+  it("allows turning the reread flag off", () => {
+    const merged = mergeReadState({ readStatus: "read", reread: true }, { reread: false });
+    expect(JSON.parse(merged)).toEqual({ readStatus: "read", reread: false });
+  });
+
+  it("keeps the existing state when no read state is specified", () => {
+    const merged = mergeReadState({ readStatus: "read", reread: true }, {});
+    expect(JSON.parse(merged)).toEqual({ readStatus: "read", reread: true });
   });
 });
 
@@ -144,9 +226,55 @@ describe("toBookmarkDTO", () => {
       tags: ["a", "b"],
       metadata: { k: "v" },
       favorite: true,
+      readStatus: "unread",
+      reread: false,
       createdAt: "2024-01-01T00:00:00.000Z",
       updatedAt: "2024-01-02T00:00:00.000Z",
     });
+  });
+
+  it("includes read state from metadata in the DTO", () => {
+    const dto = toBookmarkDTO({
+      id: "b1",
+      roomId: "r1",
+      categoryId: "c1",
+      url: "https://example.com/",
+      title: "title",
+      description: null,
+      ogImage: null,
+      memo: null,
+      tagsJson: "[]",
+      metadata: '{"readStatus":"read","reread":true}',
+      favorite: false,
+      createdAt: new Date("2024-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+      category: { name: "技術記事", slug: "tech-article" },
+    } as never);
+
+    expect(dto.readStatus).toBe("read");
+    expect(dto.reread).toBe(true);
+  });
+
+  it("falls back to unread when metadata read state is invalid", () => {
+    const dto = toBookmarkDTO({
+      id: "b1",
+      roomId: "r1",
+      categoryId: "c1",
+      url: "https://example.com/",
+      title: "title",
+      description: null,
+      ogImage: null,
+      memo: null,
+      tagsJson: "[]",
+      metadata: '{"readStatus":"done","reread":true}',
+      favorite: false,
+      createdAt: new Date("2024-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+      category: null,
+    } as never);
+
+    expect(dto.readStatus).toBe("unread");
+    expect(dto.reread).toBe(false);
   });
 
   it("カテゴリ無しはslug・nameがnullになる", () => {
