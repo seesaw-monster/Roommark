@@ -23,3 +23,5 @@ dist/
 /opencode.jsonc
 /.opencode/plugins/crit.ts
 /.opencode/skills/crit/
+/.opencode/skills/test-first-feature/
+/.opencode/commands/test-first-feature.md
