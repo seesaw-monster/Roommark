@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { EventSection } from "@/components/EventSection";
+import { getEventsForTop } from "@/lib/events";
 import { getRooms } from "@/lib/rooms";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
-  const rooms = await getRooms();
+  const [rooms, events] = await Promise.all([getRooms(), getEventsForTop()]);
   return (
     <main>
       <header className="mb-8 text-center">
@@ -11,7 +15,8 @@ export default async function Home() {
           入りたい部屋を選ぶ。異なるジャンルは混ぜて表示しない。
         </p>
       </header>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <EventSection events={events} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {rooms.map((room) => (
           <Link
             key={room.slug}
