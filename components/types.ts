@@ -1,3 +1,33 @@
+import type {
+  EventKind,
+  EventStatus,
+  TicketStatus,
+} from "@/lib/event-constants";
+
+export type { EventKind, EventStatus, TicketStatus };
+
+export type EventDTO = {
+  id: string;
+  roomId: string;
+  kind: EventKind;
+  title: string;
+  startDate: string;
+  startTime: string | null;
+  endDate: string;
+  endTime: string | null;
+  venue: string | null;
+  imageUrl: string | null;
+  eventUrl: string | null;
+  ticketStartDate: string | null;
+  ticketStartTime: string | null;
+  ticketEndDate: string | null;
+  ticketEndTime: string | null;
+  status: EventStatus;
+  ticketStatus: TicketStatus | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type RoomInfo = {
   id: string;
   slug: string;
