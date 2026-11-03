@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import type { RoomInfo } from "./types";
 import { fetchOgpPreview } from "./types";
 
@@ -46,6 +46,12 @@ export function RegisterModal({
     } finally {
       setFetching(false);
     }
+  }
+
+  function handleUrlKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing || fetching) return;
+    e.preventDefault();
+    handleFetchTitle();
   }
 
   async function handleSave() {
@@ -104,6 +110,7 @@ export function RegisterModal({
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={handleUrlKeyDown}
                 placeholder="https://example.com/article"
                 className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
               />
