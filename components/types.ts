@@ -59,6 +59,19 @@ export type BookmarkDTO = {
 
 export type TagCount = { name: string; count: number };
 
+export type PersonDTO = {
+  id: string;
+  roomId: string;
+  name: string;
+  subGenres: string[];
+  memo: string | null;
+  url: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SubGenreCount = { name: string; count: number };
+
 export async function fetchOgpPreview(url: string) {
   const res = await fetch(`/api/ogp?url=${encodeURIComponent(url)}`);
   if (!res.ok) throw new Error("OGP取得に失敗しました");

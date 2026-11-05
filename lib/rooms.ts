@@ -1,8 +1,9 @@
 import { prisma } from "./prisma";
 
-export const FIXED_ROOM_SLUGS = ["engineer", "book", "music", "event"] as const;
+export const FIXED_ROOM_SLUGS = ["engineer", "book", "music", "event", "person"] as const;
 export type FixedRoomSlug = (typeof FIXED_ROOM_SLUGS)[number];
 export const EVENT_ROOM_SLUG = "event";
+export const PERSON_ROOM_SLUG = "person";
 
 export async function getRooms() {
   return prisma.room.findMany({

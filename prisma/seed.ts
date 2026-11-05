@@ -5,6 +5,7 @@ const ROOMS = [
   { slug: "book", name: "本", icon: "📚", sortOrder: 1 },
   { slug: "music", name: "音楽", icon: "🎵", sortOrder: 2 },
   { slug: "event", name: "イベント", icon: "🎪", sortOrder: 3 },
+  { slug: "person", name: "人物", icon: "👤", sortOrder: 4 },
 ] as const;
 
 const CATEGORIES: Record<string, { name: string; slug: string; sortOrder: number }[]> = {
@@ -33,7 +34,7 @@ export async function main() {
       });
     }
   }
-  console.log("seed: fixed rooms ensured (engineer/book/music/event)");
+  console.log("seed: fixed rooms ensured (engineer/book/music/event/person)");
 }
 
 main()
