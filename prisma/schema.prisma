@@ -16,6 +16,7 @@ model Room {
   categories Category[]
   bookmarks Bookmark[]
   events    Event[]
+  people    Person[]
 }
 
 model Category {
@@ -51,6 +52,21 @@ model Bookmark {
   @@index([roomId, createdAt])
   @@index([roomId, updatedAt])
   @@index([roomId, title])
+}
+
+// Why not Json/String[]: SQLite provider has no native Json/Array columns, so subgenres are stored as serialized String and parsed in lib/people.ts.
+model Person {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name          String
+  subGenresJson String   @default("[]")
+  memo          String?
+  url           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([roomId, name])
 }
 
 // Why not DateTime: events are JST calendar dates, so date-only values and optional times avoid timezone conversion.
